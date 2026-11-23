@@ -1,0 +1,11 @@
+{
+  "baseName": "orca-base",
+  "snapshotId": "",
+  "authSourceSnapshotId": "",
+  "scope": "",
+  "project": "",
+  "port": "7331",
+  "repoUrl": "https://github.com/Gabrielnt0/onront-flow.git",
+  "repoRef": "main",
+  "projectRoot": "/workspace/onront-flow"
+}
