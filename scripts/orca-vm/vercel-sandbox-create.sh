@@ -41,7 +41,8 @@ cleanup_on_error() {
   status=$?
   trap - EXIT
   if [ "$status" -ne 0 ]; then
-    vercel sandbox remove "$name" ${vercel_args[@]+"${vercel_args[@]}"} >/dev/null 2>&1 || true
+    vercel sandbox remove "$name" --delete-orphan-snapshots \
+      ${vercel_args[@]+"${vercel_args[@]}"} >/dev/null 2>&1 || true
   fi
   exit "$status"
 }
@@ -101,7 +102,8 @@ recipe_json="$(vercel sandbox exec "$name" ${vercel_args[@]+"${vercel_args[@]}"}
     exit 1
   ')"
 
-node -e 'const p=JSON.parse(process.argv[1]); console.log(JSON.stringify({...p, schemaVersion:1, userData:{...p.userData, provider:"vercel-sandbox", resourceId:process.argv[2], snapshotId:process.argv[3]}}))' \
-  "$recipe_json" "$name" "$snapshot_id"
+# Pairing address is stored so resume does not have to guess the published URL.
+node -e 'const p=JSON.parse(process.argv[1]); console.log(JSON.stringify({...p, schemaVersion:1, userData:{...p.userData, provider:"vercel-sandbox", resourceId:process.argv[2], snapshotId:process.argv[3], pairingAddress:process.argv[4]}}))' \
+  "$recipe_json" "$name" "$snapshot_id" "$pairing_ws"
 
 trap - EXIT

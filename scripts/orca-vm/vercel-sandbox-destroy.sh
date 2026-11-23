@@ -28,4 +28,5 @@ if [ -z "$resource_id" ]; then
   echo "[destroy] no resource id in payload; derived ${resource_id} from instance id" >&2
 fi
 
-vercel sandbox remove "$resource_id" ${vercel_args[@]+"${vercel_args[@]}"} >&2
+vercel sandbox remove "$resource_id" --delete-orphan-snapshots \
+  ${vercel_args[@]+"${vercel_args[@]}"} >&2

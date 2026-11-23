@@ -19,13 +19,20 @@ vercel_args=()
 [ -n "$scope" ] && vercel_args+=(--scope "$scope")
 [ -n "$project" ] && vercel_args+=(--project "$project")
 
-resume_output="$(vercel sandbox start "$resource_id" ${vercel_args[@]+"${vercel_args[@]}"} 2>&1)"
-printf '%s\n' "$resume_output" >&2
+# The Sandbox CLI has no `start` subcommand: a persistent sandbox is resumed by
+# running `sandbox exec` against its name. The published URL was captured in
+# userData at create time; fall back to the live config for older result objects.
+pairing_ws="$(printf '%s' "$payload" | node -e 'const d=JSON.parse(require("fs").readFileSync(0,"utf8")); process.stdout.write(d.recipeResult?.userData?.pairingAddress ?? "")')"
 
-public_url="$(printf '%s\n' "$resume_output" | sed -nE 's#.*(https://[^[:space:]]+\.vercel\.run).*#\1#p' | head -1)"
-[ -n "$public_url" ] || { echo "no published URL in resume output" >&2; exit 1; }
-pairing_ws="${public_url/https:\/\//wss://}"
+if [ -z "$pairing_ws" ]; then
+  config_output="$(vercel sandbox config list "$resource_id" ${vercel_args[@]+"${vercel_args[@]}"} 2>&1 || true)"
+  printf '%s\n' "$config_output" >&2
+  public_url="$(printf '%s\n' "$config_output" | sed -nE 's#.*(https://[^[:space:]]+\.vercel\.run).*#\1#p' | head -1)"
+  [ -n "$public_url" ] || { echo "no published URL for ${resource_id}; add pairingAddress to recipeResult.userData" >&2; exit 1; }
+  pairing_ws="${public_url/https:\/\//wss://}"
+fi
 
+echo "[resume] resuming ${resource_id} via sandbox exec" >&2
 recipe_json="$(vercel sandbox exec "$resource_id" ${vercel_args[@]+"${vercel_args[@]}"} --timeout 60s \
   --env "ORCA_PORT=$port" --env "ORCA_PROJECT_ROOT=$project_root" --env "ORCA_PAIRING_ADDRESS=$pairing_ws" \
   -- bash -lc 'set -euo pipefail
@@ -48,5 +55,5 @@ recipe_json="$(vercel sandbox exec "$resource_id" ${vercel_args[@]+"${vercel_arg
     exit 1
   ')"
 
-node -e 'const p=JSON.parse(process.argv[1]); console.log(JSON.stringify({...p, schemaVersion:1, userData:{...p.userData, provider:"vercel-sandbox", resourceId:process.argv[2]}}))' \
-  "$recipe_json" "$resource_id"
+node -e 'const p=JSON.parse(process.argv[1]); console.log(JSON.stringify({...p, schemaVersion:1, userData:{...p.userData, provider:"vercel-sandbox", resourceId:process.argv[2], pairingAddress:process.argv[3]}}))' \
+  "$recipe_json" "$resource_id" "$pairing_ws"

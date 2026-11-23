@@ -41,7 +41,9 @@ cleanup_snapshot() {
 
 echo "[base] provisioning build sandbox ${base_name}" >&2
 trap 'cleanup_snapshot "$base_name"' EXIT
-vercel sandbox create --name "$base_name" --runtime node24 --timeout "$timeout" --vcpus 4 \
+# The default managed image already includes Node LTS, Python, git, and the
+# coding agents; there is no --runtime flag in the current Sandbox CLI.
+vercel sandbox create --name "$base_name" --timeout "$timeout" --vcpus 4 \
   --publish-port "$port" --snapshot-expiration 30d --keep-last-snapshots 2 \
   ${vercel_args[@]+"${vercel_args[@]}"} >&2
 
