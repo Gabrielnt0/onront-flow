@@ -1,0 +1,12 @@
+{
+  "baseName": "orca-base",
+  "snapshotId": "snap_3EYLW0KUfBXTpspBtkhiZ1Zbjgiz",
+  "authSourceSnapshotId": "snap_AzbKH313a9wo4CuHtBqcJInH0Dr7",
+  "scope": "onront",
+  "project": "vercel-sandbox-default-project",
+  "port": "7331",
+  "repoUrl": "https://github.com/Gabrielnt0/onront-flow.git",
+  "repoRef": "main",
+  "projectRoot": "/workspace/onront-flow",
+  "orcaCliVersion": "1.4.274"
+}

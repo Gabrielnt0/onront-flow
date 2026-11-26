@@ -1,0 +1,29 @@
+# Per-workspace environment recipe for ONRONT Flow.
+#
+# The recipe boots a Vercel Sandbox from a prebuilt snapshot, clones the repo,
+# and runs `orca serve` so Orca can pair into it (Orca-server connection mode).
+# Scope, project, and snapshot ids live in scripts/orca-vm/vercel-sandbox-state.json
+# and are never committed with secrets.
+
+environmentRecipes:
+  - id: vercel-sandbox
+    name: Vercel Sandbox
+    create: .\scripts\orca-vm\vercel-sandbox-create.cmd
+    suspend: .\scripts\orca-vm\vercel-sandbox-suspend.cmd
+    resume: .\scripts\orca-vm\vercel-sandbox-resume.cmd
+    destroy: .\scripts\orca-vm\vercel-sandbox-destroy.cmd
+    timeoutSeconds:
+      create: 1800
+      suspend: 300
+      resume: 600
+      destroy: 300
+    passEnv:
+      - GH_TOKEN
+      - GITHUB_TOKEN
+      - VERCEL_TOKEN
+      - VERCEL_ORG_ID
+      - VERCEL_PROJECT_ID
+      - VERCEL_TEAM_ID
+
+scripts:
+  setup: node scripts/orca-vm/setup.mjs
