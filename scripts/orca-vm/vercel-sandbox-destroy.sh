@@ -7,6 +7,7 @@ set -euo pipefail
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=lib.sh
 . "${script_dir}/lib.sh"
+ensure_vercel_auth
 
 payload="$(cat)"
 resource_id="$(printf '%s' "$payload" | node -e 'const d=JSON.parse(require("fs").readFileSync(0,"utf8")); process.stdout.write(d.recipeResult?.userData?.resourceId ?? "")')"

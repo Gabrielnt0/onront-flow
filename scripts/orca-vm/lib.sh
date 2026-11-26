@@ -5,6 +5,45 @@
 orca_vm_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 state_file="${ORCA_VM_STATE_FILE:-${orca_vm_dir}/vercel-sandbox-state.json}"
 
+# WSL commonly exposes a root-owned ~/.local that the Vercel CLI cannot write.
+# Redirect only that case; native macOS/Linux keep their normal config location.
+if [ -d /mnt/c ] && [ -n "${HOME:-}" ] && [ -e "${HOME}/.local" ] && [ ! -w "${HOME}/.local" ]; then
+  export XDG_DATA_HOME="${XDG_DATA_HOME:-${TMPDIR:-/tmp}/orca-vercel-cli}"
+  mkdir -p "$XDG_DATA_HOME"
+fi
+
+# Reuse the desktop Vercel login when the CLI runs inside WSL. The token is
+# read into process environment only; it is never written to a file or state.
+ensure_vercel_auth() {
+  [ -n "${VERCEL_TOKEN:-${VERCEL_AUTH_TOKEN:-}}" ] && return 0
+  [ -d /mnt/c ] || return 0
+  local user auth_file token
+  user="$(cmd.exe /c echo %USERNAME% 2>/dev/null | tr -d '\r' || true)"
+  [ -n "$user" ] || return 0
+  auth_file="/mnt/c/Users/${user}/AppData/Roaming/com.vercel.cli/Data/auth.json"
+  [ -f "$auth_file" ] || return 0
+  token="$(node -e 'const fs=require("fs"); try { const j=JSON.parse(fs.readFileSync(process.argv[1],"utf8")); process.stdout.write(j.token || ""); } catch {}' "$auth_file" || true)"
+  [ -n "$token" ] || return 0
+  export VERCEL_TOKEN="$token"
+  export VERCEL_AUTH_TOKEN="$token"
+}
+
+# github_token -> token on stdout, empty when no desktop CLI login is available.
+github_token() {
+  if [ -n "${GH_TOKEN:-${GITHUB_TOKEN:-}}" ]; then
+    printf '%s' "${GH_TOKEN:-$GITHUB_TOKEN}"
+    return 0
+  fi
+  if command -v gh >/dev/null 2>&1; then
+    gh auth token 2>/dev/null || true
+    return 0
+  fi
+  if [ -d /mnt/c ]; then
+    local gh_exe="/mnt/c/Program Files/GitHub CLI/gh.exe"
+    [ -x "$gh_exe" ] && "$gh_exe" auth token 2>/dev/null || true
+  fi
+}
+
 # json_value <file> <dotted.key>  -> value on stdout, empty when absent
 json_value() {
   node -e '

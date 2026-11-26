@@ -5,6 +5,7 @@ set -euo pipefail
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=lib.sh
 . "${script_dir}/lib.sh"
+ensure_vercel_auth
 
 snapshot_id="$(state_value snapshotId)"
 scope="$(env_value VERCEL_SCOPE scope "")"
@@ -25,7 +26,8 @@ vercel_args=()
 
 command -v vercel >/dev/null 2>&1 || { echo "vercel CLI is not installed" >&2; exit 69; }
 
-gh_token="${GH_TOKEN:-${GITHUB_TOKEN:-$(command -v gh >/dev/null 2>&1 && gh auth token 2>/dev/null || true)}}"
+gh_token="$(github_token)"
+[ -n "$gh_token" ] || { echo "no git token available (GH_TOKEN, GITHUB_TOKEN, or gh auth token)" >&2; exit 77; }
 
 recipe_id="${ORCA_RECIPE_ID:-vercel-sandbox}"
 recipe_id="${recipe_id//./-}"
@@ -74,7 +76,16 @@ vercel sandbox exec "$name" ${vercel_args[@]+"${vercel_args[@]}"} --timeout 20m 
     rm -f /tmp/askpass.sh
     c="$(git rev-parse HEAD)"
     if [ ! -f .orca-built ] || [ "$(cat .orca-built)" != "$c" ]; then
-      npm ci --no-audit --no-fund
+      if [ -f package.json ]; then
+        if [ -f package-lock.json ] || [ -f npm-shrinkwrap.json ]; then
+          npm ci --no-audit --no-fund
+        else
+          echo "[create] no lockfile in ${ORCA_REPO_REF}; using npm install" >&2
+          npm install --no-audit --no-fund
+        fi
+      else
+        echo "[create] no package.json in ${ORCA_REPO_REF}; skipping npm install" >&2
+      fi
       printf "%s" "$c" > .orca-built
     fi
   ' >&2

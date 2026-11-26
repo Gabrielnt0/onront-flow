@@ -8,10 +8,10 @@
 environmentRecipes:
   - id: vercel-sandbox
     name: Vercel Sandbox
-    create: ./scripts/orca-vm/vercel-sandbox-create.sh
-    suspend: ./scripts/orca-vm/vercel-sandbox-suspend.sh
-    resume: ./scripts/orca-vm/vercel-sandbox-resume.sh
-    destroy: ./scripts/orca-vm/vercel-sandbox-destroy.sh
+    create: .\scripts\orca-vm\vercel-sandbox-create.cmd
+    suspend: .\scripts\orca-vm\vercel-sandbox-suspend.cmd
+    resume: .\scripts\orca-vm\vercel-sandbox-resume.cmd
+    destroy: .\scripts\orca-vm\vercel-sandbox-destroy.cmd
     timeoutSeconds:
       create: 1800
       suspend: 300
